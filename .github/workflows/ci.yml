@@ -1,4 +1,3 @@
-
 name: Continuous Testing Pipeline
 
 on:
@@ -7,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 jobs:
   build-test-package:
@@ -39,3 +39,23 @@ jobs:
 
       - name: Build Docker image
         run: docker build --tag continuous-testing-framework:${{ github.sha }} .
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker tag continuous-testing-framework:${{ github.sha }} ghcr.io/klu2300031196/devops-based-continuous-testing-framework:latest
+          docker tag continuous-testing-framework:${{ github.sha }} ghcr.io/klu2300031196/devops-based-continuous-testing-framework:${{ github.sha }}
+
+      - name: Push Docker image to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker push ghcr.io/klu2300031196/devops-based-continuous-testing-framework:latest
+          docker push ghcr.io/klu2300031196/devops-based-continuous-testing-framework:${{ github.sha }}
