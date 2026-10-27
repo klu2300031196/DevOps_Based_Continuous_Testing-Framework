@@ -1,3 +1,4 @@
+
 name: Continuous Testing Pipeline
 
 on:
@@ -10,6 +11,7 @@ permissions:
 jobs:
   build-test-package:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -34,3 +36,6 @@ jobs:
 
       - name: Build application package
         run: mvn --batch-mode package -DskipTests
+
+      - name: Build Docker image
+        run: docker build --tag continuous-testing-framework:${{ github.sha }} .
