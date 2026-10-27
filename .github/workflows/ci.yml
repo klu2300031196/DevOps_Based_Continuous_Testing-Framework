@@ -1,3 +1,4 @@
+
 name: Continuous Testing Pipeline
 
 on:
@@ -23,8 +24,31 @@ jobs:
           java-version: '21'
           cache: maven
 
+      - name: Set up Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Build application
+        run: mvn --batch-mode clean package -DskipTests
+
+      - name: Start application
+        run: |
+          nohup java -jar target/continuous-testing-framework-1.0.0.jar --server.port=8081 > app.log 2>&1 &
+          echo $! > app.pid
+
+      - name: Wait for application health
+        run: |
+          for i in {1..30}; do
+            if curl --fail http://localhost:8081/api/health; then
+              echo "Application is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          cat app.log
+          exit 1
+
       - name: Build and run automated tests
-        run: mvn --batch-mode clean verify
+        run: mvn --batch-mode test
 
       - name: Upload test reports
         if: always()
@@ -33,9 +57,6 @@ jobs:
           name: junit-test-reports
           path: target/surefire-reports/
           if-no-files-found: warn
-
-      - name: Build application package
-        run: mvn --batch-mode package -DskipTests
 
       - name: Build Docker image
         run: docker build --tag continuous-testing-framework:${{ github.sha }} .
